@@ -104,9 +104,15 @@ export default function EmployerRegistrationPage() {
         location: formData.location,
       })
 
-      if (logoFile) {
+      if (response.error) {
+        toast.error(response.error)
+        return
+      }
+
+      const userId = response.data?.id || response.data?.user?.id
+      if (logoFile && userId) {
         try {
-          await uploadAvatar(response.user.id, logoFile)
+          await uploadAvatar(userId, logoFile)
         } catch (err) {
           console.error("Logo upload failed:", err)
         }

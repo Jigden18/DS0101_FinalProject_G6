@@ -94,6 +94,11 @@ export default function StudentRegistrationPage() {
         graduationYear: parseInt(formData.graduationYear),
       })
 
+      if (response.error) {
+        safeToastError(response.error)
+        return
+      }
+
       const userId = response.data?.user?.id ?? response.data?.id
       if (avatarFile && userId) {
         try {

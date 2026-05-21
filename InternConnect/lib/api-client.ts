@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
 
 export interface ApiResponse<T = any> {
   status: number
@@ -24,11 +24,30 @@ export function setToken(token: string) {
   }
 }
 
+export function setRefreshToken(token: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("refreshToken", token)
+  }
+}
+
+function setUserId(userId: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("userId", userId)
+  }
+}
+
 // Remove token from localStorage
 export function removeToken() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("token")
+    localStorage.removeItem("refreshToken")
+    localStorage.removeItem("userId")
   }
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("refreshToken")
 }
 
 // Make API request with automatic token attachment
@@ -131,7 +150,14 @@ export async function registerEmployer(data: {
 }) {
   return apiRequest("/auth/register/employer", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      email: data.email,
+      password: data.password,
+      company_name: data.companyName,
+      contact_person: data.contactPerson,
+      industry: data.industry,
+      location: data.location,
+    }),
   })
 }
 
@@ -143,6 +169,13 @@ export async function login(email: string, password: string) {
 
   if (data && data.token) {
     setToken(data.token)
+    if (data.refreshToken) {
+      setRefreshToken(data.refreshToken)
+    }
+    const userId = data.user?.id || data.id
+    if (userId) {
+      setUserId(userId)
+    }
   }
 
   return { data, error, status }
@@ -156,8 +189,11 @@ export async function logout() {
 }
 
 export async function refreshToken() {
+  const storedRefreshToken = getRefreshToken()
+
   const { data, error, status } = await apiRequest("/auth/refresh-token", {
     method: "POST",
+    body: JSON.stringify({ refresh_token: storedRefreshToken }),
   })
 
   if (data && data.token) {
@@ -177,7 +213,7 @@ export async function forgotPassword(email: string) {
 export async function resetPassword(token: string, newPassword: string) {
   return apiRequest("/auth/reset-password", {
     method: "POST",
-    body: JSON.stringify({ token, newPassword }),
+    body: JSON.stringify({ token, new_password: newPassword }),
   })
 }
 

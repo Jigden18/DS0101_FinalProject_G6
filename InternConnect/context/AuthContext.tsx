@@ -20,7 +20,7 @@ interface AuthContextType {
   user: AuthUser | null
   role: UserRole | null
   setRole: (role: UserRole | null) => void
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole | null }>
   logout: () => Promise<void>
   isAuthenticated: boolean
   isLoading: boolean
@@ -30,6 +30,15 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+function normalizeRole(role: unknown): UserRole | null {
+  if (typeof role !== "string") return null
+  const normalized = role.toLowerCase()
+  if (normalized === "student" || normalized === "employer" || normalized === "admin") {
+    return normalized
+  }
+  return null
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -43,7 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
-      if (token) {
+      const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null
+      if (token && userId) {
         setIsLoading(true)
         try {
           // Attempt to refresh the JWT to verify the session
@@ -55,19 +65,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           
           // Try to fetch current user data
-          const { data, error } = await getUser("me")
+          const { data, error } = await getUser(userId)
           if (data && !error) {
             const userData = data
+            const normalizedRole = normalizeRole(userData.role) || "student"
+            const profile = userData.student || userData.employer || userData.admin || {}
             setUser({
               id: userData.id,
-              name: userData.name || userData.contactPerson || "User",
+              name: profile.fullName || profile.companyName || userData.name || "User",
               email: userData.email,
-              role: userData.role || "student",
-              avatar: userData.avatar,
-              companyName: userData.companyName,
-              logo: userData.logo,
+              role: normalizedRole,
+              avatar: userData.student?.avatarUrl,
+              companyName: userData.employer?.companyName,
+              logo: userData.employer?.logoUrl,
             })
-            setRoleState(userData.role || "student")
+            setRoleState(normalizedRole)
           }
         } catch (err) {
           // Token may be invalid, clear it
@@ -89,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; role?: UserRole | null }> => {
     setIsLoading(true)
     try {
       const { data, error } = await apiLogin(email, password)
@@ -99,18 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data) {
-        const role = data.role || data.user?.role || "student"
-        setRoleState(role as UserRole)
+        const role = normalizeRole(data.role || data.user?.role) || "student"
+        setRoleState(role)
         setUser({
           id: data.id || data.user?.id,
           name: data.name || data.user?.name || data.contactPerson || email,
           email: data.email || email,
-          role: role as UserRole,
+          role,
           avatar: data.avatar || data.user?.avatar,
           companyName: data.companyName || data.user?.companyName,
           logo: data.logo || data.user?.logo,
         })
-        return { success: true }
+        return { success: true, role }
       }
 
       return { success: false, error: "Login failed" }

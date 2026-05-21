@@ -54,10 +54,9 @@ export default function LoginPage() {
 
       toast.success("Login successful!")
       
-      // Redirect based on email domain since role is set in context
-      if (email.includes("admin")) {
+      if (result.role === "admin") {
         router.push("/dashboard/admin")
-      } else if (email.includes("@techcorp") || email.includes("@greenleaf") || email.includes("@financeplus")) {
+      } else if (result.role === "employer") {
         router.push("/dashboard/employer")
       } else {
         router.push("/dashboard/student")
