@@ -32,11 +32,14 @@ interface Application {
   listing?: {
     id: string
     title: string
+    employer?: {
+      companyName: string
+      logoUrl?: string
+    }
   }
   employer?: {
-    id: string
     companyName: string
-    logo?: string
+    logoUrl?: string
   }
 }
 
@@ -65,7 +68,10 @@ export default function StudentDashboardPage() {
           : (data && Array.isArray(data.applications)
             ? data.applications
             : [])
-        setApplications(apps)
+        setApplications(apps.map((app: any) => ({
+          ...app,
+          employer: app.employer || app.listing?.employer,
+        })))
       }
     } catch (err) {
       setError("Failed to fetch applications")
@@ -82,7 +88,7 @@ export default function StudentDashboardPage() {
 
   const filteredApplications = applications.filter((app) => {
     if (statusFilter === "all") return true
-    return app.status === statusFilter
+    return app.status?.toLowerCase() === statusFilter
   })
 
   const statusFilters: { value: StatusFilter; label: string }[] = [
@@ -173,7 +179,7 @@ export default function StudentDashboardPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={application.employer?.logo} alt={application.employer?.companyName} />
+                              <AvatarImage src={application.employer?.logoUrl} alt={application.employer?.companyName} />
                               <AvatarFallback className="text-xs">
                                 {application.employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
                               </AvatarFallback>
@@ -211,7 +217,7 @@ export default function StudentDashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={application.employer?.logo} alt={application.employer?.companyName} />
+                            <AvatarImage src={application.employer?.logoUrl} alt={application.employer?.companyName} />
                             <AvatarFallback>
                               {application.employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
                             </AvatarFallback>

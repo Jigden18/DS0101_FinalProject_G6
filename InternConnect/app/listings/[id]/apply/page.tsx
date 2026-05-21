@@ -24,7 +24,7 @@ interface Listing {
   employer?: {
     id: string
     companyName: string
-    logo?: string
+    logoUrl?: string
   }
 }
 
@@ -152,7 +152,7 @@ export default function ApplyPage({ params }: PageProps) {
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={employer?.logo} alt={employer?.companyName} />
+              <AvatarImage src={employer?.logoUrl} alt={employer?.companyName} />
               <AvatarFallback>
                 {employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
               </AvatarFallback>
