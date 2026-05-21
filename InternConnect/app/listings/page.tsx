@@ -257,7 +257,7 @@ export default function ListingsPage() {
             <SelectItem value="all">Any Hours</SelectItem>
             {workHoursOptions.map((hours) => (
               <SelectItem key={hours} value={hours}>
-                {hours}/day
+                {hours}
               </SelectItem>
             ))}
           </SelectContent>

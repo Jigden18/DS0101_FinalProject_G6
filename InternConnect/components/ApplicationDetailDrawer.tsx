@@ -151,7 +151,7 @@ export function ApplicationDetailDrawer({
           <div className="grid grid-cols-2 gap-4 bg-muted/40 p-4 rounded-xl border border-muted/50">
             <div className="flex items-center gap-2.5 text-sm text-foreground">
               <Clock className="h-4.5 w-4.5 text-primary" />
-              <span>{listingData.workHours || "N/A"}/day</span>
+              <span>{listingData.workHours || "N/A"}</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm text-foreground">
               <DollarSign className="h-4.5 w-4.5 text-primary" />

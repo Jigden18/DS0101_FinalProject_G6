@@ -17,31 +17,7 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
-import { getListing, updateListing } from "@/lib/api-client"
-
-const jobFields = [
-  "Software Engineering",
-  "Product Management",
-  "Data Science",
-  "Design",
-  "Marketing",
-  "Finance",
-  "Other"
-]
-
-const locations = [
-  "Singapore",
-  "Remote",
-  "New York",
-  "London",
-  "San Francisco"
-]
-
-const workHoursOptions = [
-  "4 hours/day",
-  "6 hours/day",
-  "8 hours/day"
-]
+import { getConstants, getListing, updateListing } from "@/lib/api-client"
 
 const defaultRequirements = [
   "Pursuing a degree in Computer Science or related field",
@@ -67,9 +43,28 @@ export default function EditListingPage({ params }: PageProps) {
   const [deadline, setDeadline] = useState<Date | undefined>(undefined)
   const [selectedRequirements, setSelectedRequirements] = useState<string[]>([])
   const [customRequirement, setCustomRequirement] = useState("")
+  const [locations, setLocations] = useState<string[]>([])
+  const [jobFields, setJobFields] = useState<string[]>([])
+  const [workHoursOptions, setWorkHoursOptions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [listingFound, setListingFound] = useState(true)
+
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const { data } = await getConstants()
+        if (data) {
+          setLocations(data.locations || [])
+          setJobFields(data.job_fields || [])
+          setWorkHoursOptions(data.work_hours || [])
+        }
+      } catch (err) {
+        console.error("Failed to load constants", err)
+      }
+    }
+    fetchConstants()
+  }, [])
 
   // Fetch listing details on mount
   useEffect(() => {
