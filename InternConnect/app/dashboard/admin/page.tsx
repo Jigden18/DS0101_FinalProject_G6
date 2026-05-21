@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { StatusBadge } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
-import { Check, X, UserX, UserCheck, Loader2, BarChart3, ShieldAlert, Sparkles, TrendingUp, Users } from "lucide-react"
+import { Check, X, UserX, UserCheck, Loader2, BarChart3, ShieldAlert, Sparkles, TrendingUp, Users, Building2 } from "lucide-react"
 import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 import { 
   getUsers, 

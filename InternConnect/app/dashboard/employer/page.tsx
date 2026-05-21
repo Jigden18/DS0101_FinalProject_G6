@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { StatusBadge } from "@/components/StatusBadge"
+import { StatusBadge, type StatusType } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
 import { Plus, Pencil, XCircle, Users, Loader2 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
@@ -42,6 +42,10 @@ interface Listing {
   _count?: {
     applications?: number
   }
+}
+
+function normalizeStatus(status: string): StatusType {
+  return status.toLowerCase() as StatusType
 }
 
 export default function EmployerDashboardPage() {
@@ -161,7 +165,7 @@ export default function EmployerDashboardPage() {
                   <TableBody>
                     {listings.map((listing) => {
                       const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
-                      const status = listing.status
+                      const status = normalizeStatus(listing.status)
                       
                       return (
                         <TableRow key={listing.id}>
@@ -195,7 +199,7 @@ export default function EmployerDashboardPage() {
                                   <span className="sr-only">Edit</span>
                                 </Button>
                               </Link>
-                              {status !== "closed" && status !== "CLOSED" && (
+                              {status !== "closed" && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm" title="Close Listing">
@@ -233,7 +237,7 @@ export default function EmployerDashboardPage() {
               <div className="md:hidden space-y-4">
                 {listings.map((listing) => {
                   const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
-                  const status = listing.status
+                  const status = normalizeStatus(listing.status)
                   
                   return (
                     <Card key={listing.id}>
@@ -261,7 +265,7 @@ export default function EmployerDashboardPage() {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </Link>
-                          {status !== "closed" && status !== "CLOSED" && (
+                          {status !== "closed" && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="outline" size="sm">

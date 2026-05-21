@@ -127,7 +127,7 @@ export async function registerStudent(data: {
   course: string
   graduationYear: number
 }) {
-  return apiRequest("/auth/register/student", {
+  const response = await apiRequest("/auth/register/student", {
     method: "POST",
     body: JSON.stringify({
       email: data.email,
@@ -138,6 +138,16 @@ export async function registerStudent(data: {
       graduation_year: data.graduationYear,
     }),
   })
+
+  if (response.data?.token) {
+    setToken(response.data.token)
+    const userId = response.data.user?.id || response.data.id
+    if (userId) {
+      setUserId(userId)
+    }
+  }
+
+  return response
 }
 
 export async function registerEmployer(data: {
