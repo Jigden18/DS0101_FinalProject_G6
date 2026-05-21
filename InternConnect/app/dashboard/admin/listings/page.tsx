@@ -25,8 +25,8 @@ import {
 import { StatusBadge } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
 import { Trash2, Loader2 } from "lucide-react"
-import { toast } from "sonner"
 import { getListings, deleteListing } from "@/lib/api-client"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 interface Listing {
   id: string

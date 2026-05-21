@@ -340,14 +340,22 @@ export async function getApplicants(listingId: string) {
 export async function createListing(data: Record<string, any>) {
   return apiRequest("/listings", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      job_field: data.job_field ?? data.jobField,
+      work_hours: data.work_hours ?? data.workHours,
+    }),
   })
 }
 
 export async function updateListing(listingId: string, data: Record<string, any>) {
   return apiRequest(`/listings/${listingId}`, {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      job_field: data.job_field ?? data.jobField,
+      work_hours: data.work_hours ?? data.workHours,
+    }),
   })
 }
 

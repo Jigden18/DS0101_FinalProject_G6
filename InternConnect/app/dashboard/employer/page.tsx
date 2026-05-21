@@ -26,9 +26,9 @@ import {
 import { StatusBadge } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
 import { Plus, Pencil, XCircle, Users, Loader2 } from "lucide-react"
-import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
 import { getMyListings, closeListing } from "@/lib/api-client"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 interface Listing {
   id: string
@@ -39,6 +39,9 @@ interface Listing {
   deadline: string
   status: string
   applicants?: any[]
+  _count?: {
+    applications?: number
+  }
 }
 
 export default function EmployerDashboardPage() {
@@ -60,7 +63,7 @@ export default function EmployerDashboardPage() {
         if (fetchError) {
           setError(fetchError)
         } else if (data) {
-          setListings(Array.isArray(data) ? data : [])
+          setListings(Array.isArray(data.listings) ? data.listings : [])
         }
       } catch (err) {
         setError("Failed to fetch listings")
@@ -83,7 +86,7 @@ export default function EmployerDashboardPage() {
       } else {
         safeToastSuccess("Listing closed successfully!")
         setListings(listings.map(l => 
-          l.id === listingId ? { ...l, status: 'closed' } : l
+          l.id === listingId ? { ...l, status: "CLOSED" } : l
         ))
       }
     } catch (err) {
@@ -157,7 +160,7 @@ export default function EmployerDashboardPage() {
                   </TableHeader>
                   <TableBody>
                     {listings.map((listing) => {
-                      const applicantCount = listing.applicants?.length || 0
+                      const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
                       const status = listing.status
                       
                       return (
@@ -229,7 +232,7 @@ export default function EmployerDashboardPage() {
               {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
                 {listings.map((listing) => {
-                  const applicantCount = listing.applicants?.length || 0
+                  const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
                   const status = listing.status
                   
                   return (

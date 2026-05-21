@@ -39,10 +39,10 @@ interface Listing {
   employer?: {
     id: string
     companyName: string
-    logo?: string
+    logoUrl?: string
     industry: string
     location: string
-    bio: string
+    companyBio: string
   }
 }
 
@@ -116,7 +116,7 @@ export default function ListingDetailPage({ params }: PageProps) {
             <CardHeader>
               <div className="flex items-start gap-4">
                 <Avatar className="h-14 w-14 flex-shrink-0">
-                  <AvatarImage src={employer?.logo} alt={employer?.companyName} />
+                  <AvatarImage src={employer?.logoUrl} alt={employer?.companyName} />
                   <AvatarFallback className="text-lg">
                     {employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
                   </AvatarFallback>
@@ -203,7 +203,7 @@ export default function ListingDetailPage({ params }: PageProps) {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={employer?.logo} alt={employer?.companyName} />
+                  <AvatarImage src={employer?.logoUrl} alt={employer?.companyName} />
                   <AvatarFallback>
                     {employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
                   </AvatarFallback>
@@ -227,7 +227,7 @@ export default function ListingDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <p className="text-sm text-muted-foreground">{employer?.bio}</p>
+              <p className="text-sm text-muted-foreground">{employer?.companyBio}</p>
 
               <Separator />
 
