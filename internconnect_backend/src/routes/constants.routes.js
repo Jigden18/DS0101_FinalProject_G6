@@ -22,6 +22,16 @@ router.get("/", (req, res) => {
         "Other",
       ],
       work_hours: ["Full-time", "Part-time", "Contract", "Internship"],
+      locations: [
+        "San Francisco, CA",
+        "New York, NY",
+        "Chicago, IL",
+        "Austin, TX",
+        "Los Angeles, CA",
+        "Seattle, WA",
+        "Boston, MA",
+        "Remote",
+      ],
       industries: [
         "Technology",
         "Data & Analytics",

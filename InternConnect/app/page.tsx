@@ -162,7 +162,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              2024 InternConnect. All rights reserved.
+              2026 InternConnect. All rights reserved.
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <Link href="#" className="hover:text-foreground transition-colors">

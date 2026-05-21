@@ -1,16 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
-import { 
-  Student, 
-  Employer, 
-  Admin, 
-  students, 
-  employers, 
-  admins,
-  findUserByCredentials,
-  type UserRole
-} from "@/lib/mock-data"
+import { createContext, useContext, useState, ReactNode, useEffect } from "react"
+import { login as apiLogin, logout as apiLogout, getUser, refreshToken as apiRefreshToken, setToken, removeToken } from "@/lib/api-client"
+import type { UserRole } from "@/lib/mock-data"
 
 export type { UserRole }
 
@@ -28,12 +20,13 @@ interface AuthContextType {
   user: AuthUser | null
   role: UserRole | null
   setRole: (role: UserRole | null) => void
-  login: (email: string, password: string) => { success: boolean; error?: string }
-  logout: () => void
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  logout: () => Promise<void>
   isAuthenticated: boolean
-  currentStudent: Student | null
-  currentEmployer: Employer | null
-  currentAdmin: Admin | null
+  isLoading: boolean
+  currentStudent: any | null
+  currentEmployer: any | null
+  currentAdmin: any | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -41,108 +34,104 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [role, setRoleState] = useState<UserRole | null>(null)
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null)
-  const [currentEmployer, setCurrentEmployer] = useState<Employer | null>(null)
-  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null)
+  const [currentStudent, setCurrentStudent] = useState<any | null>(null)
+  const [currentEmployer, setCurrentEmployer] = useState<any | null>(null)
+  const [currentAdmin, setCurrentAdmin] = useState<any | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Initialize from token on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+      if (token) {
+        setIsLoading(true)
+        try {
+          // Attempt to refresh the JWT to verify the session
+          const refreshRes = await apiRefreshToken()
+          if (refreshRes.error) {
+            removeToken()
+            setIsLoading(false)
+            return
+          }
+          
+          // Try to fetch current user data
+          const { data, error } = await getUser("me")
+          if (data && !error) {
+            const userData = data
+            setUser({
+              id: userData.id,
+              name: userData.name || userData.contactPerson || "User",
+              email: userData.email,
+              role: userData.role || "student",
+              avatar: userData.avatar,
+              companyName: userData.companyName,
+              logo: userData.logo,
+            })
+            setRoleState(userData.role || "student")
+          }
+        } catch (err) {
+          // Token may be invalid, clear it
+          removeToken()
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
+  }, [])
 
   const setRole = (newRole: UserRole | null) => {
     setRoleState(newRole)
     setCurrentStudent(null)
     setCurrentEmployer(null)
     setCurrentAdmin(null)
-
-    if (newRole === "student") {
-      const student = students[0]
-      setCurrentStudent(student)
-      setUser({
-        id: student.id,
-        name: student.name,
-        email: student.email,
-        role: "student",
-        avatar: student.avatar,
-      })
-    } else if (newRole === "employer") {
-      const employer = employers[0]
-      setCurrentEmployer(employer)
-      setUser({
-        id: employer.id,
-        name: employer.contactPerson,
-        email: employer.email,
-        role: "employer",
-        companyName: employer.companyName,
-        logo: employer.logo,
-      })
-    } else if (newRole === "admin") {
-      const admin = admins[0]
-      setCurrentAdmin(admin)
-      setUser({
-        id: admin.id,
-        name: admin.name,
-        email: admin.email,
-        role: "admin",
-      })
-    } else {
-      setUser(null)
-    }
-  }
-
-  const login = (email: string, password: string): { success: boolean; error?: string } => {
-    const result = findUserByCredentials(email, password)
-    
-    if (!result) {
-      return { success: false, error: "Invalid email or password" }
-    }
-
-    const { user: foundUser, role: foundRole } = result
-    setRoleState(foundRole)
-
-    if (foundRole === "student") {
-      const student = foundUser as Student
-      setCurrentStudent(student)
-      setCurrentEmployer(null)
-      setCurrentAdmin(null)
-      setUser({
-        id: student.id,
-        name: student.name,
-        email: student.email,
-        role: "student",
-        avatar: student.avatar,
-      })
-    } else if (foundRole === "employer") {
-      const employer = foundUser as Employer
-      setCurrentStudent(null)
-      setCurrentEmployer(employer)
-      setCurrentAdmin(null)
-      setUser({
-        id: employer.id,
-        name: employer.contactPerson,
-        email: employer.email,
-        role: "employer",
-        companyName: employer.companyName,
-        logo: employer.logo,
-      })
-    } else if (foundRole === "admin") {
-      const admin = foundUser as Admin
-      setCurrentStudent(null)
-      setCurrentEmployer(null)
-      setCurrentAdmin(admin)
-      setUser({
-        id: admin.id,
-        name: admin.name,
-        email: admin.email,
-        role: "admin",
-      })
-    }
-
-    return { success: true }
-  }
-
-  const logout = () => {
     setUser(null)
-    setRoleState(null)
-    setCurrentStudent(null)
-    setCurrentEmployer(null)
-    setCurrentAdmin(null)
+  }
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await apiLogin(email, password)
+
+      if (error) {
+        return { success: false, error }
+      }
+
+      if (data) {
+        const role = data.role || data.user?.role || "student"
+        setRoleState(role as UserRole)
+        setUser({
+          id: data.id || data.user?.id,
+          name: data.name || data.user?.name || data.contactPerson || email,
+          email: data.email || email,
+          role: role as UserRole,
+          avatar: data.avatar || data.user?.avatar,
+          companyName: data.companyName || data.user?.companyName,
+          logo: data.logo || data.user?.logo,
+        })
+        return { success: true }
+      }
+
+      return { success: false, error: "Login failed" }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    setIsLoading(true)
+    try {
+      await apiLogout()
+    } finally {
+      setUser(null)
+      setRoleState(null)
+      setCurrentStudent(null)
+      setCurrentEmployer(null)
+      setCurrentAdmin(null)
+      removeToken()
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -154,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAuthenticated: user !== null,
+        isLoading,
         currentStudent,
         currentEmployer,
         currentAdmin,
@@ -171,3 +161,4 @@ export function useAuth() {
   }
   return context
 }
+

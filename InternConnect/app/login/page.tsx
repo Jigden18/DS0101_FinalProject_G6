@@ -36,29 +36,25 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsLoading(true)
     setErrors({})
 
-    // Simulate network delay
-    setTimeout(() => {
-      const result = login(email, password)
+    try {
+      const result = await login(email, password)
       
       if (!result.success) {
         setErrors({ form: result.error })
         toast.error(result.error || "Login failed")
-        setIsLoading(false)
         return
       }
 
       toast.success("Login successful!")
       
-      // Get role from the result to determine redirect
-      // Since login was successful, the role is set in context
-      // We need to check what role was set
+      // Redirect based on email domain since role is set in context
       if (email.includes("admin")) {
         router.push("/dashboard/admin")
       } else if (email.includes("@techcorp") || email.includes("@greenleaf") || email.includes("@financeplus")) {
@@ -66,9 +62,12 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard/student")
       }
-      
+    } catch (error) {
+      setErrors({ form: "An unexpected error occurred" })
+      toast.error("An unexpected error occurred")
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   return (
@@ -102,7 +101,15 @@ export default function LoginPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -115,16 +122,8 @@ export default function LoginPage() {
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
-            
-            {/* Demo credentials hint */}
-            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Demo Credentials:</p>
-              <p>Student: alex.chen@university.edu / student123</p>
-              <p>Employer: hr@techcorp.com / employer123</p>
-              <p>Admin: admin@internconnect.com / admin123</p>
-            </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-4 pt-6 mt-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>

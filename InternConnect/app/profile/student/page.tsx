@@ -19,16 +19,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ProfileAvatar } from "@/components/ProfileAvatar"
-import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
-import { students } from "@/lib/mock-data"
+import { getUser, updateUser, uploadAvatar, deleteUser, changePassword } from "@/lib/api-client"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 export default function StudentProfilePage() {
   const router = useRouter()
-  const { currentStudent, logout } = useAuth()
-  
-  // Use current student or fall back to first student (for role switcher)
-  const student = currentStudent || students[0]
+  const { user, logout } = useAuth()
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -38,41 +35,124 @@ export default function StudentProfilePage() {
     graduationYear: "",
   })
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>()
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
 
   const currentYear = new Date().getFullYear()
   const graduationYears = Array.from({ length: 8 }, (_, i) => currentYear - 2 + i)
 
   useEffect(() => {
-    if (student) {
-      setFormData({
-        fullName: student.name,
-        email: student.email,
-        university: student.university,
-        course: student.course,
-        graduationYear: student.graduationYear.toString(),
-      })
-      setAvatarPreview(student.avatar)
+    const loadProfile = async () => {
+      if (!user?.id) return
+      try {
+        const userData = await getUser(user.id)
+        setFormData({
+          fullName: userData.fullName || "",
+          email: userData.email || "",
+          university: userData.university || "",
+          course: userData.course || "",
+          graduationYear: userData.graduationYear?.toString() || "",
+        })
+        setAvatarPreview(userData.avatar)
+      } catch (err) {
+        console.error("Failed to load profile:", err)
+        safeToastError("Failed to load profile")
+      } finally {
+        setIsLoadingProfile(false)
+      }
     }
-  }, [student])
+    loadProfile()
+  }, [user?.id])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!user?.id) return
     setIsLoading(true)
-    setTimeout(() => {
-      toast.success("Profile saved successfully!")
+    try {
+      if (avatarFile) {
+        const { error: avatarErr } = await uploadAvatar(user.id, avatarFile)
+        if (avatarErr) {
+          safeToastError(avatarErr)
+          setIsLoading(false)
+          return
+        }
+      }
+
+      const { error: updateErr } = await updateUser(user.id, {
+        full_name: formData.fullName,
+        university: formData.university,
+        course: formData.course,
+        graduation_year: parseInt(formData.graduationYear) || undefined,
+      })
+
+      if (updateErr) {
+        safeToastError(updateErr)
+      } else {
+        safeToastSuccess("Profile saved successfully!")
+      }
+    } catch (err) {
+      safeToastError("Failed to save profile")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
-  const handleDeleteAccount = () => {
-    toast.success("Account deleted successfully!")
-    logout()
-    router.push("/")
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return
+    try {
+      const { error } = await deleteUser(user.id)
+      if (error) {
+        safeToastError(error)
+      } else {
+        safeToastSuccess("Account deleted successfully!")
+        logout()
+        router.push("/")
+      }
+    } catch (err) {
+      safeToastError("Failed to delete account")
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user?.id) return
+
+    if (newPassword !== confirmNewPassword) {
+      safeToastError("New passwords do not match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      safeToastError("Password must be at least 6 characters long")
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      const { error } = await changePassword(user.id, currentPassword, newPassword)
+      if (error) {
+        safeToastError(error)
+      } else {
+        safeToastSuccess("Password changed successfully!")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmNewPassword("")
+      }
+    } catch (err) {
+      safeToastError("Failed to change password")
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   return (
@@ -101,7 +181,10 @@ export default function StudentProfilePage() {
                 fallback={formData.fullName.split(" ").map(n => n[0]).join("").toUpperCase() || "?"}
                 size="lg"
                 editable
-                onImageChange={(_, preview) => setAvatarPreview(preview)}
+                onImageChange={(file, preview) => {
+                  setAvatarPreview(preview)
+                  if (file) setAvatarFile(file)
+                }}
               />
               <p className="text-xs text-muted-foreground">Click to change photo</p>
             </div>
@@ -175,7 +258,7 @@ export default function StudentProfilePage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-8">
                 <Button onClick={handleSave} disabled={isLoading} className="flex-1 sm:flex-initial">
                   {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
@@ -205,6 +288,57 @@ export default function StudentProfilePage() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Security & Password</CardTitle>
+          <CardDescription>
+            Ensure your account is using a secure password.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current Password</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                disabled={isChangingPassword}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                disabled={isChangingPassword}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+              <Input
+                id="confirmNewPassword"
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                required
+                disabled={isChangingPassword}
+              />
+            </div>
+            <div className="pt-6">
+              <Button type="submit" disabled={isChangingPassword}>
+                {isChangingPassword ? "Changing Password..." : "Change Password"}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
-import { RoleSwitcher } from "@/components/RoleSwitcher"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Menu, User, LogOut, Settings } from "lucide-react"
 import { useState } from "react"
 
@@ -115,8 +114,6 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <RoleSwitcher />
-
             {isAuthenticated && role && (
               <Badge variant="secondary" className={`hidden sm:flex ${getRoleBadgeColor()}`}>
                 {role.charAt(0).toUpperCase() + role.slice(1)}
@@ -178,6 +175,10 @@ export function Navbar() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-72">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Navigation Menu</SheetTitle>
+                  <SheetDescription>Mobile navigation menu options.</SheetDescription>
+                </SheetHeader>
                 <div className="flex flex-col gap-4 mt-6">
                   {isAuthenticated && (
                     <div className="flex items-center gap-3 pb-4 border-b">

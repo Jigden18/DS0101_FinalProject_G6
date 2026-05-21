@@ -4,7 +4,7 @@ export type ApplicationStatus = "submitted" | "under_review" | "accepted" | "rej
 export type ListingStatus = "active" | "closed" | "pending"
 export type UserStatus = "active" | "inactive" | "pending"
 
-type StatusType = ApplicationStatus | ListingStatus | UserStatus
+export type StatusType = ApplicationStatus | ListingStatus | UserStatus
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   submitted: {
@@ -46,7 +46,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status]
+  const normalizedStatus = (status || "").toLowerCase() as StatusType
+  const config = statusConfig[normalizedStatus] || {
+    label: typeof status === 'string' ? status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : String(status),
+    className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+  }
   return (
     <Badge variant="secondary" className={config.className}>
       {config.label}

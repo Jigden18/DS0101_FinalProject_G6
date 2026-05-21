@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ProfileAvatar } from "@/components/ProfileAvatar"
-import { toast } from "sonner"
+import { registerStudent, uploadAvatar } from "@/lib/api-client"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 export default function StudentRegistrationPage() {
   const router = useRouter()
@@ -78,18 +79,37 @@ export default function StudentRegistrationPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsLoading(true)
-    
-    // Simulate registration
-    setTimeout(() => {
-      toast.success("Registration successful! Please login to continue.")
+    try {
+      const response = await registerStudent({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        university: formData.university,
+        course: formData.course,
+        graduationYear: parseInt(formData.graduationYear),
+      })
+
+      const userId = response.data?.user?.id ?? response.data?.id
+      if (avatarFile && userId) {
+        try {
+          await uploadAvatar(userId, avatarFile)
+        } catch (err) {
+          console.error("Avatar upload failed:", err)
+        }
+      }
+
+      safeToastSuccess("Registration successful! Please login to continue.")
       router.push("/login")
+    } catch (err: any) {
+      safeToastError(err.message || "Registration failed")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (

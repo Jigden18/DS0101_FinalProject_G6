@@ -5,15 +5,13 @@ const { asyncHandler } = require("../middleware/error.middleware");
 const checkApplication = asyncHandler(async (req, res) => {
   const { listing_id } = req.query;
   if (!listing_id) {
-    return res
-      .status(400)
-      .json({
-        status: 400,
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "listing_id query parameter is required",
-        },
-      });
+    return res.status(400).json({
+      status: 400,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "listing_id query parameter is required",
+      },
+    });
   }
 
   const application = await prisma.application.findFirst({
@@ -31,30 +29,42 @@ const checkApplication = asyncHandler(async (req, res) => {
 });
 
 const submitApplication = asyncHandler(async (req, res) => {
-  const { listing_id, cover_letter } = req.body;
+  // Accept both snake_case and camelCase from frontend
+  const listing_id   = req.body.listing_id   || req.body.listingId;
+  const cover_letter = req.body.cover_letter  || req.body.coverLetter;
 
   if (!req.file || !req.fileUrl) {
-    return res
-      .status(400)
-      .json({
-        status: 400,
-        error: { code: "VALIDATION_ERROR", message: "Resume file is required" },
-      });
+    return res.status(400).json({
+      status: 400,
+      error: { code: "VALIDATION_ERROR", message: "Resume file is required" },
+    });
+  }
+
+  if (!listing_id) {
+    return res.status(400).json({
+      status: 400,
+      error: { code: "VALIDATION_ERROR", message: "listing_id is required" },
+    });
+  }
+
+  if (!cover_letter || cover_letter.trim().length === 0) {
+    return res.status(400).json({
+      status: 400,
+      error: { code: "VALIDATION_ERROR", message: "cover_letter is required" },
+    });
   }
 
   const listing = await prisma.listing.findFirst({
     where: { id: listing_id, status: "ACTIVE" },
   });
   if (!listing) {
-    return res
-      .status(404)
-      .json({
-        status: 404,
-        error: {
-          code: "NOT_FOUND",
-          message: "Listing not found or no longer active",
-        },
-      });
+    return res.status(404).json({
+      status: 404,
+      error: {
+        code: "NOT_FOUND",
+        message: "Listing not found or no longer active",
+      },
+    });
   }
 
   try {
@@ -75,23 +85,19 @@ const submitApplication = asyncHandler(async (req, res) => {
       },
     });
 
-    res
-      .status(201)
-      .json({
-        status: 201,
-        data: { ...application, message: "Application submitted successfully" },
-      });
+    res.status(201).json({
+      status: 201,
+      data: { ...application, message: "Application submitted successfully" },
+    });
   } catch (err) {
     if (err.code === "P2002") {
-      return res
-        .status(409)
-        .json({
-          status: 409,
-          error: {
-            code: "DUPLICATE_ENTRY",
-            message: "You have already applied to this listing",
-          },
-        });
+      return res.status(409).json({
+        status: 409,
+        error: {
+          code: "DUPLICATE_ENTRY",
+          message: "You have already applied to this listing",
+        },
+      });
     }
     throw err;
   }
@@ -156,12 +162,10 @@ const getApplication = asyncHandler(async (req, res) => {
   });
 
   if (!application)
-    return res
-      .status(404)
-      .json({
-        status: 404,
-        error: { code: "NOT_FOUND", message: "Application not found" },
-      });
+    return res.status(404).json({
+      status: 404,
+      error: { code: "NOT_FOUND", message: "Application not found" },
+    });
 
   const isStudent =
     req.user.role === "STUDENT" && application.studentId === req.user.sub;
@@ -171,12 +175,10 @@ const getApplication = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === "ADMIN";
 
   if (!isStudent && !isEmployer && !isAdmin) {
-    return res
-      .status(403)
-      .json({
-        status: 403,
-        error: { code: "FORBIDDEN", message: "Forbidden" },
-      });
+    return res.status(403).json({
+      status: 403,
+      error: { code: "FORBIDDEN", message: "Forbidden" },
+    });
   }
 
   res.json({ status: 200, data: application });
@@ -191,25 +193,22 @@ const updateStatus = asyncHandler(async (req, res) => {
   });
 
   if (!application)
-    return res
-      .status(404)
-      .json({
-        status: 404,
-        error: { code: "NOT_FOUND", message: "Application not found" },
-      });
+    return res.status(404).json({
+      status: 404,
+      error: { code: "NOT_FOUND", message: "Application not found" },
+    });
+
   if (
     req.user.role === "EMPLOYER" &&
     application.listing.employerId !== req.user.sub
   ) {
-    return res
-      .status(403)
-      .json({
-        status: 403,
-        error: {
-          code: "FORBIDDEN",
-          message: "You can only update applications on your own listings",
-        },
-      });
+    return res.status(403).json({
+      status: 403,
+      error: {
+        code: "FORBIDDEN",
+        message: "You can only update applications on your own listings",
+      },
+    });
   }
 
   const updated = await prisma.application.update({
@@ -235,33 +234,29 @@ const withdrawApplication = asyncHandler(async (req, res) => {
   });
 
   if (!application)
-    return res
-      .status(404)
-      .json({
-        status: 404,
-        error: { code: "NOT_FOUND", message: "Application not found" },
-      });
+    return res.status(404).json({
+      status: 404,
+      error: { code: "NOT_FOUND", message: "Application not found" },
+    });
+
   if (application.studentId !== req.user.sub) {
-    return res
-      .status(403)
-      .json({
-        status: 403,
-        error: {
-          code: "FORBIDDEN",
-          message: "You can only withdraw your own applications",
-        },
-      });
+    return res.status(403).json({
+      status: 403,
+      error: {
+        code: "FORBIDDEN",
+        message: "You can only withdraw your own applications",
+      },
+    });
   }
+
   if (application.status !== "SUBMITTED") {
-    return res
-      .status(400)
-      .json({
-        status: 400,
-        error: {
-          code: "INVALID_ACTION",
-          message: "Only applications with SUBMITTED status can be withdrawn",
-        },
-      });
+    return res.status(400).json({
+      status: 400,
+      error: {
+        code: "INVALID_ACTION",
+        message: "Only applications with SUBMITTED status can be withdrawn",
+      },
+    });
   }
 
   await prisma.application.delete({ where: { id: req.params.id } });

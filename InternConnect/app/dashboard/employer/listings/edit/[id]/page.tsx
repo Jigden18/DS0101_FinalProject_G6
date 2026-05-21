@@ -16,13 +16,39 @@ import { ArrowLeft, CalendarIcon, Plus, X } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { 
-  getListingById, 
-  locations, 
-  workHoursOptions, 
-  jobFields, 
-  defaultRequirements 
-} from "@/lib/mock-data"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
+import { getListing, updateListing } from "@/lib/api-client"
+
+const jobFields = [
+  "Software Engineering",
+  "Product Management",
+  "Data Science",
+  "Design",
+  "Marketing",
+  "Finance",
+  "Other"
+]
+
+const locations = [
+  "Singapore",
+  "Remote",
+  "New York",
+  "London",
+  "San Francisco"
+]
+
+const workHoursOptions = [
+  "4 hours/day",
+  "6 hours/day",
+  "8 hours/day"
+]
+
+const defaultRequirements = [
+  "Pursuing a degree in Computer Science or related field",
+  "Familiarity with modern programming languages (React/Node)",
+  "Strong problem-solving and analytical skills",
+  "Good communication and teamwork abilities"
+]
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -31,7 +57,6 @@ interface PageProps {
 export default function EditListingPage({ params }: PageProps) {
   const router = useRouter()
   const { id } = use(params)
-  const listing = getListingById(id)
   
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -42,22 +67,38 @@ export default function EditListingPage({ params }: PageProps) {
   const [deadline, setDeadline] = useState<Date | undefined>(undefined)
   const [selectedRequirements, setSelectedRequirements] = useState<string[]>([])
   const [customRequirement, setCustomRequirement] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [listingFound, setListingFound] = useState(true)
 
-  // Pre-populate form with existing data
+  // Fetch listing details on mount
   useEffect(() => {
-    if (listing) {
-      setTitle(listing.title)
-      setDescription(listing.description)
-      setLocation(listing.location)
-      setJobField(listing.jobField)
-      setWorkHours(listing.workHours)
-      setStipend(listing.stipend)
-      setDeadline(new Date(listing.deadline))
-      setSelectedRequirements(listing.requirements)
+    const fetchListing = async () => {
+      setIsLoading(true)
+      try {
+        const { data, error } = await getListing(id)
+        if (data && !error) {
+          setTitle(data.title || "")
+          setDescription(data.description || "")
+          setLocation(data.location || "")
+          setJobField(data.jobField || "")
+          setWorkHours(data.workHours || "")
+          setStipend(data.stipend || "")
+          setDeadline(data.deadline ? new Date(data.deadline) : undefined)
+          setSelectedRequirements(data.requirements || [])
+          setListingFound(true)
+        } else {
+          setListingFound(false)
+        }
+      } catch (err) {
+        toast.error("Failed to load listing details")
+        setListingFound(false)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [listing])
+    fetchListing()
+  }, [id])
 
   const handleRequirementToggle = (requirement: string) => {
     setSelectedRequirements(prev => 
@@ -94,19 +135,37 @@ export default function EditListingPage({ params }: PageProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsLoading(true)
-    setTimeout(() => {
-      toast.success("Listing saved successfully!")
-      router.push("/dashboard/employer")
+    try {
+      const { error } = await updateListing(id, {
+        title,
+        description,
+        jobField,
+        location,
+        workHours,
+        stipend,
+        deadline: deadline ? deadline.toISOString() : undefined,
+        requirements: selectedRequirements,
+      })
+
+      if (error) {
+        safeToastError(error)
+      } else {
+        safeToastSuccess("Listing saved successfully!")
+        router.push("/dashboard/employer")
+      }
+    } catch (err) {
+      safeToastError("Failed to update listing")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
-  if (!listing) {
+  if (!listingFound) {
     return (
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-8">
         <Card>

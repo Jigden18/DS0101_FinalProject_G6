@@ -1,40 +1,67 @@
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowLeft, Upload, FileText } from "lucide-react"
-import { toast } from "sonner"
-import { getListingById, getEmployerById } from "@/lib/mock-data"
+import { ArrowLeft, Upload, FileText, Loader2 } from "lucide-react"
+import { getListing, submitApplication } from "@/lib/api-client"
+import { useAuth } from "@/context/AuthContext"
+import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
+interface Listing {
+  id: string
+  title: string
+  employer?: {
+    id: string
+    companyName: string
+    logo?: string
+  }
+}
+
 export default function ApplyPage({ params }: PageProps) {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const { id } = use(params)
-  const listing = getListingById(id)
-  const employer = listing ? getEmployerById(listing.employerId) : null
 
-  const [coverLetter, setCoverLetter] = useState("")
+  const [listing, setListing] = useState<Listing | null>(null)
+  const [isLoadingListing, setIsLoadingListing] = useState(true)
   const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<{ coverLetter?: string; resume?: string }>({})
+  const [coverLetter, setCoverLetter] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<{ resume?: string; coverLetter?: string }>({})
+
+  useEffect(() => {
+    const fetchListing = async () => {
+      setIsLoadingListing(true)
+      try {
+        const { data } = await getListing(id)
+        if (data) setListing(data)
+      } catch (err) {
+        safeToastError("Failed to load listing")
+      } finally {
+        setIsLoadingListing(false)
+      }
+    }
+    fetchListing()
+  }, [id])
 
   const validateForm = () => {
     const newErrors: typeof errors = {}
 
     if (!coverLetter.trim()) {
       newErrors.coverLetter = "Cover letter is required"
-    } else if (coverLetter.length < 50) {
-      newErrors.coverLetter = "Cover letter should be at least 50 characters"
+    } else if (coverLetter.trim().length < 50) {
+      newErrors.coverLetter = "Cover letter must be at least 50 characters"
     }
 
     if (!resumeFile) {
@@ -61,21 +88,37 @@ export default function ApplyPage({ params }: PageProps) {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateForm()) return
+    if (!validateForm() || !user || !resumeFile) return
 
-    setIsLoading(true)
-    
-    // Simulate submission
-    setTimeout(() => {
-      toast.success("Application submitted successfully!")
+    setIsSubmitting(true)
+    try {
+      const { error } = await submitApplication(id, coverLetter, resumeFile)
+
+      if (error) {
+        safeToastError(error)
+        return
+      }
+
+      safeToastSuccess("Application submitted successfully!")
       router.push("/dashboard/student")
-      setIsLoading(false)
-    }, 1000)
+    } catch (err) {
+      safeToastError("Failed to submit application")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (!listing || !employer) {
+  if (authLoading || isLoadingListing) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!listing) {
     return (
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-8">
         <Card>
@@ -92,6 +135,8 @@ export default function ApplyPage({ params }: PageProps) {
     )
   }
 
+  const employer = listing.employer
+
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-8">
       <Link
@@ -107,12 +152,16 @@ export default function ApplyPage({ params }: PageProps) {
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={employer.logo} alt={employer.companyName} />
-              <AvatarFallback>{employer.companyName.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarImage src={employer?.logo} alt={employer?.companyName} />
+              <AvatarFallback>
+                {employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
+              </AvatarFallback>
             </Avatar>
             <div>
               <h2 className="font-semibold">{listing.title}</h2>
-              <p className="text-sm text-muted-foreground">{employer.companyName}</p>
+              <p className="text-sm text-muted-foreground">
+                {employer?.companyName || "Company"}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -127,30 +176,54 @@ export default function ApplyPage({ params }: PageProps) {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
+
+            {/* Cover Letter */}
             <div className="space-y-2">
-              <Label htmlFor="coverLetter">Cover Letter</Label>
+              <Label htmlFor="coverLetter">
+                Cover Letter <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="coverLetter"
-                placeholder="Tell us why you're a great fit for this position..."
+                placeholder="Tell the employer why you're a great fit for this role. Mention your relevant skills, experience, and what excites you about this opportunity..."
                 value={coverLetter}
-                onChange={(e) => setCoverLetter(e.target.value)}
-                rows={8}
-                disabled={isLoading}
+                onChange={(e) => {
+                  setCoverLetter(e.target.value)
+                  if (errors.coverLetter) {
+                    setErrors((prev) => ({ ...prev, coverLetter: undefined }))
+                  }
+                }}
+                rows={7}
+                disabled={isSubmitting}
               />
-              {errors.coverLetter && (
-                <p className="text-sm text-destructive">{errors.coverLetter}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {coverLetter.length} characters (minimum 50)
-              </p>
+              <div className="flex justify-between items-center">
+                {errors.coverLetter ? (
+                  <p className="text-sm text-destructive">{errors.coverLetter}</p>
+                ) : (
+                  <span />
+                )}
+                <p className={`text-xs ml-auto ${
+                  coverLetter.length < 50
+                    ? "text-muted-foreground"
+                    : "text-green-600"
+                }`}>
+                  {coverLetter.length} / 50 min characters
+                </p>
+              </div>
             </div>
 
+            {/* Resume Upload */}
             <div className="space-y-2">
-              <Label htmlFor="resume">Resume / CV (PDF only)</Label>
+              <Label htmlFor="resume">
+                Resume / CV (PDF only) <span className="text-destructive">*</span>
+              </Label>
               <div className="relative">
-                <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  resumeFile ? "border-green-500 bg-green-50" : "hover:border-primary"
-                }`}>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    resumeFile
+                      ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                      : "border-muted-foreground/25 hover:border-primary"
+                  }`}
+                >
                   {resumeFile ? (
                     <div className="space-y-2">
                       <FileText className="h-8 w-8 mx-auto text-green-600" />
@@ -163,7 +236,7 @@ export default function ApplyPage({ params }: PageProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => setResumeFile(null)}
-                        disabled={isLoading}
+                        disabled={isSubmitting}
                       >
                         Remove
                       </Button>
@@ -184,7 +257,7 @@ export default function ApplyPage({ params }: PageProps) {
                   accept=".pdf"
                   onChange={handleFileChange}
                   className="absolute inset-0 opacity-0 cursor-pointer"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
               {errors.resume && (
@@ -193,11 +266,27 @@ export default function ApplyPage({ params }: PageProps) {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button type="submit" className="flex-1" disabled={isLoading}>
-                {isLoading ? "Submitting..." : "Submit Application"}
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={isSubmitting || !user}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Application"
+                )}
               </Button>
               <Link href={`/listings/${id}`} className="flex-1 sm:flex-initial">
-                <Button type="button" variant="outline" className="w-full" disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
               </Link>

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ProfileAvatar } from "@/components/ProfileAvatar"
 import { toast } from "sonner"
+import { registerEmployer, uploadAvatar } from "@/lib/api-client"
 
 const industries = [
   "Technology",
@@ -88,18 +89,36 @@ export default function EmployerRegistrationPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsLoading(true)
-    
-    // Simulate registration (pending approval)
-    setTimeout(() => {
+    try {
+      const response = await registerEmployer({
+        companyName: formData.companyName,
+        contactPerson: formData.contactPerson,
+        email: formData.email,
+        password: formData.password,
+        industry: formData.industry,
+        location: formData.location,
+      })
+
+      if (logoFile) {
+        try {
+          await uploadAvatar(response.user.id, logoFile)
+        } catch (err) {
+          console.error("Logo upload failed:", err)
+        }
+      }
+
       toast.success("Registration submitted! Your account is pending admin approval.")
       router.push("/login")
+    } catch (err: any) {
+      toast.error(err.message || "Registration failed")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (

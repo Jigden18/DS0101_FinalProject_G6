@@ -1,0 +1,16 @@
+{
+  "name": "internconnect-root",
+  "version": "1.0.0",
+  "description": "Root workspace to run InternConnect frontend and backend concurrently",
+  "scripts": {
+    "setup": "npm install && npm install --prefix InternConnect && npm install --prefix internconnect_backend",
+    "db:setup": "npm run prisma:generate --prefix internconnect_backend && npm run prisma:migrate --prefix internconnect_backend && npm run prisma:seed --prefix internconnect_backend",
+    "dev:frontend": "npm run dev --prefix InternConnect",
+    "dev:backend": "npm run dev --prefix internconnect_backend",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "prisma:studio": "npm run prisma:studio --prefix internconnect_backend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

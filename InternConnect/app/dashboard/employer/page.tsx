@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,27 +25,80 @@ import {
 } from "@/components/ui/alert-dialog"
 import { StatusBadge } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
-import { Plus, Pencil, XCircle, Users } from "lucide-react"
+import { Plus, Pencil, XCircle, Users, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/context/AuthContext"
-import { listings, getApplicationsByListing } from "@/lib/mock-data"
+import { getMyListings, closeListing } from "@/lib/api-client"
+
+interface Listing {
+  id: string
+  title: string
+  location: string
+  workHours: string
+  stipend: string
+  deadline: string
+  status: string
+  applicants?: any[]
+}
 
 export default function EmployerDashboardPage() {
-  const { currentEmployer } = useAuth()
-  const [closedListings, setClosedListings] = useState<Set<string>>(new Set())
-  
-  // Get listings for the current employer (or first employer if using role switcher)
-  const employerId = currentEmployer?.id || "employer-1"
-  const employerListings = listings.filter(l => l.employerId === employerId)
+  const { user, isLoading: authLoading } = useAuth()
+  const [listings, setListings] = useState<Listing[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [closingId, setClosingId] = useState<string | null>(null)
 
-  const handleCloseListing = (listingId: string) => {
-    setClosedListings(prev => new Set([...prev, listingId]))
-    toast.success("Listing closed successfully!")
+  useEffect(() => {
+    const fetchListings = async () => {
+      if (!user) return
+      
+      setIsLoading(true)
+      setError(null)
+      
+      try {
+        const { data, error: fetchError } = await getMyListings()
+        if (fetchError) {
+          setError(fetchError)
+        } else if (data) {
+          setListings(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        setError("Failed to fetch listings")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (!authLoading) {
+      fetchListings()
+    }
+  }, [user, authLoading])
+
+  const handleCloseListing = async (listingId: string) => {
+    setClosingId(listingId)
+    try {
+      const { error } = await closeListing(listingId)
+      if (error) {
+        safeToastError(error)
+      } else {
+        safeToastSuccess("Listing closed successfully!")
+        setListings(listings.map(l => 
+          l.id === listingId ? { ...l, status: 'closed' } : l
+        ))
+      }
+    } catch (err) {
+      safeToastError("Failed to close listing")
+    } finally {
+      setClosingId(null)
+    }
   }
 
-  const getListingStatus = (listingId: string, originalStatus: string) => {
-    if (closedListings.has(listingId)) return "closed"
-    return originalStatus as "active" | "closed" | "pending"
+  if (authLoading || isLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -65,6 +118,12 @@ export default function EmployerDashboardPage() {
         </Link>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 rounded-md bg-destructive/10 text-destructive text-sm">
+          {error}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Listing Management</CardTitle>
@@ -73,7 +132,7 @@ export default function EmployerDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {employerListings.length === 0 ? (
+          {listings.length === 0 ? (
             <EmptyState
               type="listings"
               title="No listings posted yet"
@@ -97,15 +156,15 @@ export default function EmployerDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {employerListings.map((listing) => {
-                      const applicantCount = getApplicationsByListing(listing.id).length
-                      const status = getListingStatus(listing.id, listing.status)
+                    {listings.map((listing) => {
+                      const applicantCount = listing.applicants?.length || 0
+                      const status = listing.status
                       
                       return (
                         <TableRow key={listing.id}>
                           <TableCell className="font-medium">{listing.title}</TableCell>
                           <TableCell>{listing.location}</TableCell>
-                          <TableCell>{listing.workHours}/day</TableCell>
+                          <TableCell>{listing.workHours}</TableCell>
                           <TableCell>{listing.stipend}</TableCell>
                           <TableCell>{new Date(listing.deadline).toLocaleDateString()}</TableCell>
                           <TableCell>
@@ -133,7 +192,7 @@ export default function EmployerDashboardPage() {
                                   <span className="sr-only">Edit</span>
                                 </Button>
                               </Link>
-                              {status !== "closed" && (
+                              {status !== "closed" && status !== "CLOSED" && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm" title="Close Listing">
@@ -169,9 +228,9 @@ export default function EmployerDashboardPage() {
 
               {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
-                {employerListings.map((listing) => {
-                  const applicantCount = getApplicationsByListing(listing.id).length
-                  const status = getListingStatus(listing.id, listing.status)
+                {listings.map((listing) => {
+                  const applicantCount = listing.applicants?.length || 0
+                  const status = listing.status
                   
                   return (
                     <Card key={listing.id}>
@@ -199,7 +258,7 @@ export default function EmployerDashboardPage() {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </Link>
-                          {status !== "closed" && (
+                          {status !== "closed" && status !== "CLOSED" && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="outline" size="sm">

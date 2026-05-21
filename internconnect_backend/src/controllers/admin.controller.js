@@ -50,8 +50,8 @@ const getUsers = asyncHandler(async (req, res) => {
         role: true,
         status: true,
         createdAt: true,
-        student: { select: { fullName: true } },
-        employer: { select: { companyName: true } },
+        student: { select: { fullName: true, university: true, avatarUrl: true } },
+        employer: { select: { companyName: true, industry: true, logoUrl: true } },
         admin: { select: { fullName: true } },
       },
     }),
@@ -61,6 +61,9 @@ const getUsers = asyncHandler(async (req, res) => {
   const mapped = users.map((u) => ({
     ...u,
     name: u.student?.fullName || u.employer?.companyName || u.admin?.fullName,
+    university: u.student?.university || "",
+    industry: u.employer?.industry || "",
+    avatar: u.student?.avatarUrl || u.employer?.logoUrl || "",
   }));
 
   res.json({

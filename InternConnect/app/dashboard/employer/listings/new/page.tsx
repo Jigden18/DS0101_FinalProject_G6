@@ -16,10 +16,32 @@ import { ArrowLeft, CalendarIcon, Plus, X } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { locations, workHoursOptions, jobFields, defaultRequirements } from "@/lib/mock-data"
+import { defaultRequirements } from "@/lib/mock-data"
+import { createListing, getConstants } from "@/lib/api-client"
+import { useEffect } from "react"
 
 export default function NewListingPage() {
   const router = useRouter()
+  
+  const [locations, setLocations] = useState<string[]>([])
+  const [jobFields, setJobFields] = useState<string[]>([])
+  const [workHoursOptions, setWorkHoursOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const { data } = await getConstants()
+        if (data) {
+          setLocations(data.locations || [])
+          setJobFields(data.job_fields || [])
+          setWorkHoursOptions(data.work_hours || [])
+        }
+      } catch (err) {
+        console.error("Failed to load constants", err)
+      }
+    }
+    fetchConstants()
+  }, [])
   
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -69,16 +91,34 @@ export default function NewListingPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setIsLoading(true)
-    setTimeout(() => {
-      toast.success("Listing saved successfully!")
-      router.push("/dashboard/employer")
+    try {
+      const { data, error } = await createListing({
+        title,
+        description,
+        location,
+        jobField,
+        workHours,
+        stipend,
+        deadline: deadline ? deadline.toISOString() : undefined,
+        requirements: selectedRequirements,
+      })
+
+      if (error) {
+        toast.error(error)
+      } else {
+        toast.success("Listing saved successfully!")
+        router.push("/dashboard/employer")
+      }
+    } catch (err) {
+      toast.error("Failed to save listing")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (

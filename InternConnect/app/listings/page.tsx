@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { EmptyState } from "@/components/EmptyState"
 import { 
@@ -18,17 +18,30 @@ import {
   Clock, 
   DollarSign, 
   SlidersHorizontal,
-  X
+  X,
+  Loader2
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { 
-  listings, 
-  getEmployerById, 
-  jobFields, 
-  locations, 
-  workHoursOptions 
-} from "@/lib/mock-data"
+import { getListings, getConstants, searchListings, getSuggestions } from "@/lib/api-client"
+
+interface Listing {
+  id: string
+  title: string
+  description: string
+  location: string
+  workHours: string
+  stipend: string
+  deadline: string
+  jobField: string
+  employerId: string
+  employer?: {
+    id: string
+    companyName: string
+    logo?: string
+  }
+  status: string
+}
 
 export default function ListingsPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -39,41 +52,147 @@ export default function ListingsPage() {
   const [minStipend, setMinStipend] = useState("")
   const [maxStipend, setMaxStipend] = useState("")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  
+  const [listings, setListings] = useState<Listing[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const [jobFields, setJobFields] = useState<string[]>([])
+  const [locations, setLocations] = useState<string[]>([])
+  const [workHoursOptions, setWorkHoursOptions] = useState<string[]>([])
 
-  const filteredListings = useMemo(() => {
-    return listings.filter((listing) => {
-      // Search filter
-      const matchesSearch = 
-        searchQuery === "" ||
-        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        listing.description.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      // Location filter
-      const matchesLocation = 
-        selectedLocation === "all" || 
-        listing.location === selectedLocation
-      
-      // Job field filter
-      const matchesJobField = 
-        selectedJobField === "all" || 
-        listing.jobField === selectedJobField
-      
-      // Work hours filter
-      const matchesWorkHours = 
-        selectedWorkHours === "all" || 
-        listing.workHours === selectedWorkHours
-      
-      // Deadline filter
-      const matchesDeadline = 
-        !deadline || 
-        new Date(listing.deadline) >= deadline
-      
-      // Status filter (only show active listings)
-      const isActive = listing.status === "active"
-      
-      return matchesSearch && matchesLocation && matchesJobField && matchesWorkHours && matchesDeadline && isActive
-    })
-  }, [searchQuery, selectedLocation, selectedJobField, selectedWorkHours, deadline])
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Fetch dropdown constants
+  useEffect(() => {
+    const fetchConstants = async () => {
+      try {
+        const { data: constantsData } = await getConstants()
+        if (constantsData) {
+          setJobFields(constantsData.job_fields || [])
+          setLocations(constantsData.locations || [])
+          setWorkHoursOptions(constantsData.work_hours || [])
+        }
+      } catch (err) {
+        console.error("Failed to fetch constants", err)
+      }
+    }
+    fetchConstants()
+  }, [])
+
+  // Execute server-side search
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    try {
+      const filtersObj: Record<string, any> = {}
+      if (selectedLocation !== "all") {
+        filtersObj.location = [selectedLocation]
+      }
+      if (selectedJobField !== "all") {
+        filtersObj.jobField = [selectedJobField]
+      }
+      if (selectedWorkHours !== "all") {
+        filtersObj.workHours = [selectedWorkHours]
+      }
+      if (deadline) {
+        filtersObj.deadline_after = deadline.toISOString()
+      }
+
+      const { data, error: searchError } = await searchListings({
+        q: searchQuery,
+        filters: filtersObj,
+      })
+
+      if (searchError) {
+        setError(searchError)
+      } else if (data) {
+        const results = data.results || []
+        const mappedListings = results.map((l: any) => ({
+          ...l,
+          employer: l.employer ? {
+            ...l.employer,
+            logo: l.employer.logoUrl || l.employer.logo
+          } : undefined
+        }))
+        setListings(mappedListings)
+      }
+    } catch (err) {
+      setError("Failed to execute search")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const executeSearchWithQuery = async (query: string) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const filtersObj: Record<string, any> = {}
+      if (selectedLocation !== "all") {
+        filtersObj.location = [selectedLocation]
+      }
+      if (selectedJobField !== "all") {
+        filtersObj.jobField = [selectedJobField]
+      }
+      if (selectedWorkHours !== "all") {
+        filtersObj.workHours = [selectedWorkHours]
+      }
+      if (deadline) {
+        filtersObj.deadline_after = deadline.toISOString()
+      }
+
+      const { data, error: searchError } = await searchListings({
+        q: query,
+        filters: filtersObj,
+      })
+
+      if (searchError) {
+        setError(searchError)
+      } else if (data) {
+        const results = data.results || []
+        const mappedListings = results.map((l: any) => ({
+          ...l,
+          employer: l.employer ? {
+            ...l.employer,
+            logo: l.employer.logoUrl || l.employer.logo
+          } : undefined
+        }))
+        setListings(mappedListings)
+      }
+    } catch (err) {
+      setError("Failed to execute search")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Trigger search on filter changes
+  useEffect(() => {
+    handleSearch()
+  }, [selectedLocation, selectedJobField, selectedWorkHours, deadline])
+
+  // Get Autocomplete suggestions
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSuggestions([])
+      return
+    }
+    const fetchSuggestions = async () => {
+      try {
+        const { data } = await getSuggestions(searchQuery)
+        if (data && Array.isArray(data.suggestions)) {
+          setSuggestions(data.suggestions)
+        }
+      } catch (err) {
+        console.error("Failed to get suggestions:", err)
+      }
+    }
+    const timer = setTimeout(fetchSuggestions, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const clearFilters = () => {
     setSearchQuery("")
@@ -198,6 +317,16 @@ export default function ListingsPage() {
     </div>
   )
 
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -206,6 +335,12 @@ export default function ListingsPage() {
           Find internships and job opportunities that match your interests
         </p>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 rounded-md bg-destructive/10 text-destructive text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="flex gap-8">
         {/* Desktop Sidebar Filters */}
@@ -226,19 +361,45 @@ export default function ListingsPage() {
         {/* Main Content */}
         <div className="flex-1">
           {/* Search and Mobile Filter Button */}
-          <div className="flex gap-3 mb-6">
+          <form onSubmit={handleSearch} className="flex gap-3 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title or description..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setShowSuggestions(true)
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 className="pl-9"
               />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-popover text-popover-foreground border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(suggestion)
+                        setShowSuggestions(false)
+                        setTimeout(() => {
+                          executeSearchWithQuery(suggestion)
+                        }, 50)
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground text-sm truncate"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+            <Button type="submit">Search</Button>
             <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
               <SheetTrigger asChild className="lg:hidden">
-                <Button variant="outline" className="gap-2">
+                <Button type="button" variant="outline" className="gap-2">
                   <SlidersHorizontal className="h-4 w-4" />
                   Filters
                   {hasActiveFilters && (
@@ -251,75 +412,79 @@ export default function ListingsPage() {
               <SheetContent side="bottom" className="h-[85vh]">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Filter job and internship listings by field, location, hours, deadline, and stipend.
+                  </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6 overflow-y-auto">
                   <FilterContent />
                 </div>
                 <div className="pt-4 border-t mt-4">
                   <Button 
+                    type="button"
                     className="w-full" 
-                    onClick={() => setMobileFiltersOpen(false)}
+                    onClick={() => {
+                      setMobileFiltersOpen(false)
+                      handleSearch()
+                    }}
                   >
-                    Apply Filters ({filteredListings.length} results)
+                    Apply Filters ({listings.length} results)
                   </Button>
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
+          </form>
 
           {/* Results Count */}
           <p className="text-sm text-muted-foreground mb-4">
-            Showing {filteredListings.length} {filteredListings.length === 1 ? "listing" : "listings"}
+            Showing {listings.length} {listings.length === 1 ? "listing" : "listings"}
           </p>
 
           {/* Listings Grid */}
-          {filteredListings.length === 0 ? (
+          {listings.length === 0 ? (
             <EmptyState type="listings" />
           ) : (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredListings.map((listing) => {
-                const employer = getEmployerById(listing.employerId)
-                return (
-                  <Link key={listing.id} href={`/listings/${listing.id}`}>
-                    <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage src={employer?.logo} alt={employer?.companyName} />
-                            <AvatarFallback>
-                              {employer?.companyName.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-base line-clamp-1">{listing.title}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{employer?.companyName}</p>
-                          </div>
+              {listings.map((listing) => (
+                <Link key={listing.id} href={`/listings/${listing.id}`}>
+                  <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          <AvatarImage src={listing.employer?.logo} alt={listing.employer?.companyName} />
+                          <AvatarFallback>
+                            {listing.employer?.companyName?.slice(0, 2).toUpperCase() || "CO"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base line-clamp-1">{listing.title}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{listing.employer?.companyName || "Company"}</p>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{listing.location}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4 flex-shrink-0" />
-                            <span>{listing.workHours}/day</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <DollarSign className="h-4 w-4 flex-shrink-0" />
-                            <span>{listing.stipend}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <CalendarIcon className="h-4 w-4 flex-shrink-0" />
-                            <span>Deadline: {new Date(listing.deadline).toLocaleDateString()}</span>
-                          </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{listing.location}</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4 flex-shrink-0" />
+                          <span>{listing.workHours}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <DollarSign className="h-4 w-4 flex-shrink-0" />
+                          <span>{listing.stipend}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                          <span>Deadline: {new Date(listing.deadline).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           )}
         </div>
