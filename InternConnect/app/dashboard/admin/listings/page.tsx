@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { StatusBadge } from "@/components/StatusBadge"
+import { StatusBadge, type StatusType } from "@/components/StatusBadge"
 import { EmptyState } from "@/components/EmptyState"
 import { Trash2, Loader2 } from "lucide-react"
 import { getListings, deleteListing } from "@/lib/api-client"
@@ -37,6 +37,10 @@ interface Listing {
     companyName: string
     logoUrl?: string
   }
+}
+
+function normalizeStatus(status: string): StatusType {
+  return status.toLowerCase() as StatusType
 }
 
 export default function AdminListingsPage() {
@@ -132,13 +136,14 @@ export default function AdminListingsPage() {
                   </TableHeader>
                   <TableBody>
                     {listings.map((listing) => {
+                      const status = normalizeStatus(listing.status)
                       return (
                         <TableRow key={listing.id}>
                           <TableCell className="font-medium">{listing.title}</TableCell>
                           <TableCell>{listing.employer?.companyName || "Unknown"}</TableCell>
                           <TableCell>{new Date(listing.postedDate).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <StatusBadge status={listing.status.toLowerCase() as any} />
+                            <StatusBadge status={status} />
                           </TableCell>
                           <TableCell className="text-right">
                             <AlertDialog>
@@ -175,6 +180,7 @@ export default function AdminListingsPage() {
               {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
                 {listings.map((listing) => {
+                  const status = normalizeStatus(listing.status)
                   return (
                     <Card key={listing.id}>
                       <CardContent className="pt-4">
@@ -183,7 +189,7 @@ export default function AdminListingsPage() {
                             <p className="font-medium">{listing.title}</p>
                             <p className="text-sm text-muted-foreground">{listing.employer?.companyName || "Unknown"}</p>
                           </div>
-                          <StatusBadge status={listing.status.toLowerCase() as any} />
+                          <StatusBadge status={status} />
                         </div>
                         <p className="text-sm text-muted-foreground mb-3">
                           Posted {new Date(listing.postedDate).toLocaleDateString()}

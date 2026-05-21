@@ -24,9 +24,6 @@ interface AuthContextType {
   logout: () => Promise<void>
   isAuthenticated: boolean
   isLoading: boolean
-  currentStudent: any | null
-  currentEmployer: any | null
-  currentAdmin: any | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -43,9 +40,6 @@ function normalizeRole(role: unknown): UserRole | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [role, setRoleState] = useState<UserRole | null>(null)
-  const [currentStudent, setCurrentStudent] = useState<any | null>(null)
-  const [currentEmployer, setCurrentEmployer] = useState<any | null>(null)
-  const [currentAdmin, setCurrentAdmin] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   // Initialize from token on mount
@@ -95,9 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setRole = (newRole: UserRole | null) => {
     setRoleState(newRole)
-    setCurrentStudent(null)
-    setCurrentEmployer(null)
-    setCurrentAdmin(null)
     setUser(null)
   }
 
@@ -138,9 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null)
       setRoleState(null)
-      setCurrentStudent(null)
-      setCurrentEmployer(null)
-      setCurrentAdmin(null)
       removeToken()
       setIsLoading(false)
     }
@@ -156,9 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAuthenticated: user !== null,
         isLoading,
-        currentStudent,
-        currentEmployer,
-        currentAdmin,
       }}
     >
       {children}

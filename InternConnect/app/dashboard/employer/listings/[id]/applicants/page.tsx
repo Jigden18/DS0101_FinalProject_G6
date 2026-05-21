@@ -29,7 +29,6 @@ import {
   getApplicants, 
   updateApplicationStatus 
 } from "@/lib/api-client"
-import { toast } from "sonner"
 import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 interface PageProps {
@@ -67,7 +66,7 @@ export default function ApplicantsPage({ params }: PageProps) {
       }
     } catch (err) {
       setError("Failed to load applicants information")
-      toast.error("Failed to load applicants")
+      safeToastError("Failed to load applicants")
     } finally {
       setIsLoading(false)
     }

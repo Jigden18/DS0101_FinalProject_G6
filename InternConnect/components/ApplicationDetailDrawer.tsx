@@ -20,7 +20,6 @@ import { StatusBadge } from "@/components/StatusBadge"
 import { MapPin, Clock, DollarSign, Calendar, Building2, Trash2, Loader2 } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { getApplication, getListing, withdrawApplication } from "@/lib/api-client"
-import { toast } from "sonner"
 import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 
 interface ApplicationDetailDrawerProps {

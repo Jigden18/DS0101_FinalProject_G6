@@ -243,10 +243,6 @@ export default function AdminDashboardPage() {
 
   const visiblePendingEmployers = pendingEmployers
 
-  const getUserStatus = (userId: string, originalStatus: string) => {
-    return originalStatus as "active" | "inactive" | "pending"
-  }
-
   if (isLoading) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center min-h-[60vh]">
@@ -464,7 +460,7 @@ export default function AdminDashboardPage() {
                       </TableHeader>
                       <TableBody>
                         {students.map((student) => {
-                          const status = getUserStatus(student.id, student.status)
+                          const status = student.status
                           return (
                             <TableRow key={student.id} className="hover:bg-muted/20 transition-colors">
                               <TableCell>
@@ -543,7 +539,7 @@ export default function AdminDashboardPage() {
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-4">
                     {students.map((student) => {
-                      const status = getUserStatus(student.id, student.status)
+                      const status = student.status
                       return (
                         <Card key={student.id} className="border-muted/80">
                           <CardContent className="pt-4">
@@ -646,7 +642,7 @@ export default function AdminDashboardPage() {
                       </TableHeader>
                       <TableBody>
                         {employers.map((employer) => {
-                          const status = getUserStatus(employer.id, employer.status)
+                          const status = employer.status
                           return (
                             <TableRow key={employer.id} className="hover:bg-muted/20 transition-colors">
                               <TableCell>
@@ -725,7 +721,7 @@ export default function AdminDashboardPage() {
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-4">
                     {employers.map((employer) => {
-                      const status = getUserStatus(employer.id, employer.status)
+                      const status = employer.status
                       return (
                         <Card key={employer.id} className="border-muted/80">
                           <CardContent className="pt-4">

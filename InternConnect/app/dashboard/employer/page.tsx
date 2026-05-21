@@ -38,7 +38,6 @@ interface Listing {
   stipend: string
   deadline: string
   status: string
-  applicants?: any[]
   _count?: {
     applications?: number
   }
@@ -53,7 +52,6 @@ export default function EmployerDashboardPage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [closingId, setClosingId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -82,7 +80,6 @@ export default function EmployerDashboardPage() {
   }, [user, authLoading])
 
   const handleCloseListing = async (listingId: string) => {
-    setClosingId(listingId)
     try {
       const { error } = await closeListing(listingId)
       if (error) {
@@ -95,8 +92,6 @@ export default function EmployerDashboardPage() {
       }
     } catch (err) {
       safeToastError("Failed to close listing")
-    } finally {
-      setClosingId(null)
     }
   }
 
@@ -164,7 +159,7 @@ export default function EmployerDashboardPage() {
                   </TableHeader>
                   <TableBody>
                     {listings.map((listing) => {
-                      const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
+                      const applicantCount = listing._count?.applications ?? 0
                       const status = normalizeStatus(listing.status)
                       
                       return (
@@ -236,7 +231,7 @@ export default function EmployerDashboardPage() {
               {/* Mobile Cards */}
               <div className="md:hidden space-y-4">
                 {listings.map((listing) => {
-                  const applicantCount = listing._count?.applications ?? listing.applicants?.length ?? 0
+                  const applicantCount = listing._count?.applications ?? 0
                   const status = normalizeStatus(listing.status)
                   
                   return (

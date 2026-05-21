@@ -15,7 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ArrowLeft, CalendarIcon, Plus, X } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 import { safeToastError, safeToastSuccess } from "@/lib/toast-helper"
 import { getConstants, getListing, updateListing } from "@/lib/api-client"
 
@@ -86,7 +85,7 @@ export default function EditListingPage({ params }: PageProps) {
           setListingFound(false)
         }
       } catch (err) {
-        toast.error("Failed to load listing details")
+        safeToastError("Failed to load listing details")
         setListingFound(false)
       } finally {
         setIsLoading(false)

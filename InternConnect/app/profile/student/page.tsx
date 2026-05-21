@@ -37,7 +37,6 @@ export default function StudentProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>()
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -68,8 +67,6 @@ export default function StudentProfilePage() {
       } catch (err) {
         console.error("Failed to load profile:", err)
         safeToastError("Failed to load profile")
-      } finally {
-        setIsLoadingProfile(false)
       }
     }
     loadProfile()
