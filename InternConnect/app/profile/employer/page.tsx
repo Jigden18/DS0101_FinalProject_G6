@@ -63,7 +63,11 @@ export default function EmployerProfilePage() {
     const loadProfile = async () => {
       if (!user?.id) return
       try {
-        const userData = await getUser(user.id)
+        const { data: userData, error } = await getUser(user.id)
+        if (error || !userData) {
+          safeToastError(error || "Failed to load profile")
+          return
+        }
         const employerData = userData.employer || {}
         setFormData({
           companyName: employerData.companyName || "",

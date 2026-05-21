@@ -51,15 +51,20 @@ export default function StudentProfilePage() {
     const loadProfile = async () => {
       if (!user?.id) return
       try {
-        const userData = await getUser(user.id)
+        const { data: userData, error } = await getUser(user.id)
+        if (error || !userData) {
+          safeToastError(error || "Failed to load profile")
+          return
+        }
+        const studentData = userData.student || {}
         setFormData({
-          fullName: userData.fullName || "",
+          fullName: studentData.fullName || "",
           email: userData.email || "",
-          university: userData.university || "",
-          course: userData.course || "",
-          graduationYear: userData.graduationYear?.toString() || "",
+          university: studentData.university || "",
+          course: studentData.course || "",
+          graduationYear: studentData.graduationYear?.toString() || "",
         })
-        setAvatarPreview(userData.avatar)
+        setAvatarPreview(studentData.avatarUrl)
       } catch (err) {
         console.error("Failed to load profile:", err)
         safeToastError("Failed to load profile")
