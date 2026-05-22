@@ -215,6 +215,7 @@ export default function EmployerProfilePage() {
                   value={formData.companyName}
                   onChange={handleChange}
                   disabled={isLoading}
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -226,6 +227,7 @@ export default function EmployerProfilePage() {
                   value={formData.contactPerson}
                   onChange={handleChange}
                   disabled={isLoading}
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -238,6 +240,7 @@ export default function EmployerProfilePage() {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={isLoading}
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -270,6 +273,7 @@ export default function EmployerProfilePage() {
                     value={formData.location}
                     onChange={handleChange}
                     disabled={isLoading}
+                    suppressHydrationWarning
                   />
                 </div>
               </div>
@@ -338,6 +342,7 @@ export default function EmployerProfilePage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
                 disabled={isChangingPassword}
+                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -349,6 +354,7 @@ export default function EmployerProfilePage() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 disabled={isChangingPassword}
+                suppressHydrationWarning
               />
             </div>
             <div className="space-y-2">
@@ -360,6 +366,7 @@ export default function EmployerProfilePage() {
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
                 required
                 disabled={isChangingPassword}
+                suppressHydrationWarning
               />
             </div>
             <div className="pt-6">
