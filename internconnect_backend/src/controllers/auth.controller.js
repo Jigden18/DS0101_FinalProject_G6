@@ -10,6 +10,23 @@ const { asyncHandler } = require("../middleware/error.middleware");
 const registerStudent = asyncHandler(async (req, res) => {
   const { full_name, email, password, university, course, graduation_year } =
     req.body;
+  if (
+    !full_name ||
+    !email ||
+    !password ||
+    !university ||
+    !course ||
+    !graduation_year
+  ) {
+    return res.status(400).json({
+      status: 400,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "All student registration fields are required",
+      },
+    });
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
@@ -41,6 +58,23 @@ const registerStudent = asyncHandler(async (req, res) => {
 const registerEmployer = asyncHandler(async (req, res) => {
   const { company_name, contact_person, email, password, industry, location } =
     req.body;
+  if (
+    !company_name ||
+    !contact_person ||
+    !email ||
+    !password ||
+    !industry ||
+    !location
+  ) {
+    return res.status(400).json({
+      status: 400,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "All employer registration fields are required",
+      },
+    });
+  }
+
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
@@ -65,13 +99,22 @@ const registerEmployer = asyncHandler(async (req, res) => {
     status: 201,
     data: {
       ...user,
-      message: "Registration submitted. Awaiting admin approval.",
+      message: "Registration submitted. Your account is pending admin approval.",
     },
   });
 });
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({
+      status: 400,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Email and password are required",
+      },
+    });
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },

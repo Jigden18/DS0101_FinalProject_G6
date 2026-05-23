@@ -130,12 +130,13 @@ const getListing = asyncHandler(async (req, res) => {
       });
 
   // Increment view count (fire and forget)
-  prisma.listing
-    .update({
-      where: { id: listing.id },
-      data: { viewCount: { increment: 1 } },
-    })
-    .catch(() => {});
+  const updatePromise = prisma.listing.update({
+    where: { id: listing.id },
+    data: { viewCount: { increment: 1 } },
+  });
+  if (updatePromise && typeof updatePromise.catch === 'function') {
+    updatePromise.catch(() => {});
+  }
 
   res.json({ status: 200, data: listing });
 });
