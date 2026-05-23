@@ -1,6 +1,8 @@
 # ── Stage 1: build the Next.js app ───────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
