@@ -1,0 +1,51 @@
+services:
+  # ── PostgreSQL database ───────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./internconnect_backend/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ── Node.js backend ───────────────────────────────────────────────────────
+  backend:
+    build: ./internconnect_backend
+    restart: unless-stopped
+    env_file:
+      - ./internconnect_backend/.env
+    depends_on:
+      db:
+        condition: service_started
+    networks:
+      - app-network
+    volumes:
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 15s
+
+  # ── Next.js frontend ──────────────────────────────────────────────────────
+  frontend:
+    build: ./InternConnect
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  app-network:
+    driver: bridge

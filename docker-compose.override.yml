@@ -1,0 +1,18 @@
+# This file is auto-loaded by `docker compose up` — dev-only overrides.
+# Do NOT commit real secrets; keep .env out of git.
+
+services:
+  backend:
+    volumes:
+      # Live-reload: local src changes are reflected immediately
+      - ./internconnect_backend/src:/app/src
+      # Mount local uploads so avatars/resumes persist without a named volume in dev
+      - ./internconnect_backend/uploads:/app/uploads
+    ports:
+      # Expose backend so you can hit it directly from the browser / Postman
+      - "5000:5000"
+
+  db:
+    ports:
+      # Expose postgres so you can connect with TablePlus / DBeaver / psql
+      - "5432:5432"
