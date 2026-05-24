@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "InternConnect Backend API — Node.js + Express + Prisma + PostgreSQL",
   "main": "src/server.js",
+  "prisma":{
+    "seed": "node prisma/seed.js"
+  },
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
