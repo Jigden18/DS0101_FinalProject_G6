@@ -337,12 +337,12 @@ npm test
 
 Backend test results:
 
-![Backend test results](image.png)
+![Backend test results](./public/image.png)
 
 Frontend test results:
 
-![Frontend test results](image-1.png)
-![Frontend test reults](image-2.png)
+![Frontend test results](./public/image-1.png)
+![Frontend test reults](./public/image-2.png)
 ---
 
 ## Phase 2 — Dockerization
@@ -596,12 +596,12 @@ docker login
 # Build and tag
 docker build -t jigden18/internconnect-backend:latest ./internconnect_backend
 ```
-![build backend image](<Screenshot 2026-05-23 212951.png>)
+![build backend image](./public/Screenshot%202026-05-23%20212951.png)
 
 ```bash
 docker build -t jigden18/internconnect-frontend:latest ./InternConnect
 ```
-![alt text](<Screenshot 2026-05-23 215905.png>)
+![alt text](./public/Screenshot%202026-05-23%20215905.png)
 ```bash
 # Push
 docker push jigden18/internconnect-backend:latest
@@ -609,11 +609,11 @@ docker push jigden18/internconnect-frontend:latest
 ```
 Pushed backend image to registry
 
-![push backend image to registry](<Screenshot 2026-05-23 215807.png>)
+![push backend image to registry](./public/Screenshot%202026-05-23%20215807.png)
 
 Pushed frontend image to registry
 
-![push frontend image to registry](<Screenshot 2026-05-23 220418.png>)
+![push frontend image to registry](./public/Screenshot%202026-05-23%20220418.png)
 
 Images are available at:
 - `docker.io/jigden18/internconnect-backend`
@@ -622,7 +622,7 @@ Images are available at:
 
 Images pushed to DockerHub
 
-![images pushed to DockerHub](<Screenshot 2026-05-23 220556.png>)
+![images pushed to DockerHub](./public/Screenshot%202026-05-23%20220556.png)
 ---
 
 ## Phase 4 — Deploy to Render
@@ -654,7 +654,7 @@ DATABASE_URL="<external URL>" npx prisma migrate deploy
 
 `migrate deploy` applies existing migrations without prompting. Never use `migrate dev` in production — it can reset the database.
 
-![DB migration](image-3.png)
+![DB migration](./public/image-3.png)
 ---
 
 ### Step 3 — Seed the Database
@@ -691,9 +691,9 @@ Requires the `"prisma": { "seed": "node prisma/seed.js" }` block in `package.jso
 
 Deployed services
 
-![backend](<Screenshot 2026-05-23 235912.png>)
+![backend](./public/Screenshot%202026-05-23%20235912.png)
 
-![frontend](<Screenshot 2026-05-24 003718.png>)
+![frontend](./public/Screenshot%202026-05-24%20003718.png)
 
 ---
 
@@ -773,7 +773,7 @@ Runs after the security scan. Makes a `curl POST` to each Render deploy hook URL
 | `RENDER_DEPLOY_HOOK_FRONTEND` | Render deploy hook URL for frontend service |
 | `NEXT_PUBLIC_API_BASE_URL` | Full backend API URL including `/api` suffix |
 
-![secrets](image-4.png)
+![secrets](./public/image-4.png)
 ---
 
 ### End-to-End Verification Checklist
