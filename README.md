@@ -790,6 +790,9 @@ After every successful pipeline run:
 - [ ] Student registration, login, and application flow works end to end
 - [ ] Employer login, listing creation, and applicant review works end to end
 
+![pipeline](./public/Screenshot%202026-05-24%20014724.png)
+![frontend_automated](./public/Screenshot%202026-05-24%20020211.png)
+![backend_automated](./public/Screenshot%202026-05-24%20020225.png)
 ---
 
 ## Environment Variables
